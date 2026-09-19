@@ -13,10 +13,10 @@
 
 ### 主题
 #### Dark
-<png> dark.png <png>
+<png> dark.png xxx信号弱xxx <png>
 
 #### Midlight
-<png> midlight.png <png>
+<png> midlight.png xxx信号弱xxx <png>
 
 目前支持：
 
@@ -43,7 +43,7 @@
 从 Releases 下载：
 
 ```text
-DoubaoIME Darkmode.exe
+DoubaoIME_Darkmode.exe
 ```
 
 启动后选择主题、字体、透明度或头像，然后点击安装即可
