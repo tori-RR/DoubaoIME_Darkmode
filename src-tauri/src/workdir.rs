@@ -25,6 +25,30 @@ pub fn state_path() -> PathBuf {
 pub fn user_logo_path() -> PathBuf {
     app_dir().join("logo.png")
 }
+
+fn restart_pending_path() -> PathBuf {
+    app_dir().join("ime-restart.pending.json")
+}
+
+pub fn write_restart_pending(version: &str) -> Result<(), String> {
+    ensure_app_dir()?;
+    let raw = serde_json::to_vec(&serde_json::json!({ "version": version })).map_err(|e| e.to_string())?;
+    crate::safe_fs::atomic_write(&restart_pending_path(), &raw)
+}
+
+pub fn restart_pending_version() -> Option<String> {
+    let raw = crate::safe_fs::read(&restart_pending_path(), 4096).ok()?;
+    serde_json::from_slice::<serde_json::Value>(&raw)
+        .ok()?
+        .get("version")?
+        .as_str()
+        .filter(|version| version.starts_with('v') && version.len() > 1)
+        .map(str::to_string)
+}
+
+pub fn clear_restart_pending() {
+    let _ = fs::remove_file(restart_pending_path());
+}
 pub fn new_scratch() -> Result<PathBuf, String> {
     static SEQ: AtomicU64 = AtomicU64::new(0);
     let stamp = std::time::SystemTime::now()

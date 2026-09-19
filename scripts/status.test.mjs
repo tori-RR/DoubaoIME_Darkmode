@@ -140,7 +140,7 @@ test("tooltips use the requested directions and compact cache label", () => {
 test("GitHub menu button stays visible and both launch paths use the same URL", () => {
   const frontendUrl = source.match(/const PUBLIC_REPO_URL = "([^"]+)"/)?.[1];
   const backendUrl = backend.match(/const PUBLIC_REPO_URL: &str = "([^"]+)"/)?.[1];
-  assert.equal(frontendUrl, "https://github.com");
+  assert.equal(frontendUrl, "https://github.com/tori-RR/DoubaoIME_Darkmode");
   assert.equal(backendUrl, frontendUrl);
   assert.match(source, /repo\.hidden = !PUBLIC_REPO_URL/);
 });

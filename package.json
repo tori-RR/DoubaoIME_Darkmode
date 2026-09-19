@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tauri dev",
+    "test": "node --test scripts/*.test.mjs",
     "preview": "npx --yes live-server --port=1420 --no-browser --open=/preview/ --watch=ui,preview",
     "build": "tauri build"
   },

@@ -42,9 +42,13 @@ pub fn run_elevated(job: &skin::Job) -> Result<(), String> {
     safe_fs::atomic_write(&path, &raw)?;
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let params = format!("--elevated {} {}", quote(&path), safe_fs::hash(&raw));
+    crate::workdir::write_restart_pending(&job.version)?;
     let code = match shell_runas(&exe, &params) {
         Ok(code) => code,
         Err(err) => {
+            if err.contains("已取消管理员授权") || err.contains("无法提权") {
+                crate::workdir::clear_restart_pending();
+            }
             // The request is deliberately retained when helper liveness is unknown.
             return Err(err);
         }
@@ -53,6 +57,9 @@ pub fn run_elevated(job: &skin::Job) -> Result<(), String> {
     let _ = fs::remove_file(&path);
     let _ = fs::remove_dir(&dir);
     let restarted = crate::ime_process::restart(Path::new(skin::IME_ROOT), &job.version);
+    if restarted.is_ok() {
+        crate::workdir::clear_restart_pending();
+    }
     let receipt: skin::JobResult = serde_json::from_slice(&safe_fs::read(
         &receipt_root.join("dmdm_last_result.json"),
         65536,

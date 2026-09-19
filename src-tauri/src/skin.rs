@@ -142,6 +142,43 @@ pub fn detect() -> Result<DetectedIme, String> {
         version,
     })
 }
+
+/// Recover using a journaled skin directory when live version detection cannot
+/// run, e.g. IME stopped and several version folders remain. Never picks the
+/// newest folder; only a single unfinished journal is accepted.
+pub fn interrupted_ime() -> Option<DetectedIme> {
+    let versions = Path::new(IME_ROOT).join("versions");
+    let entries = fs::read_dir(&versions).ok()?;
+    let mut found = Vec::new();
+    for entry in entries.flatten() {
+        if !entry.path().is_dir() {
+            continue;
+        }
+        let version = entry.file_name().to_string_lossy().into_owned();
+        let target = DetectedIme {
+            skin: skin_for(&version),
+            version,
+        };
+        let Ok(store) = store_for(&target) else {
+            continue;
+        };
+        if store.recovery_needed().ok()? {
+            found.push(target);
+        }
+    }
+    if found.len() == 1 {
+        found.pop()
+    } else {
+        None
+    }
+}
+
+pub fn detect_for_status() -> Result<DetectedIme, String> {
+    match detect() {
+        Ok(target) => Ok(target),
+        Err(err) => interrupted_ime().ok_or(err),
+    }
+}
 pub fn originals_dir() -> Result<PathBuf, String> {
     let target = detect()?;
     store_for(&target)?.originals()?;
@@ -435,11 +472,27 @@ mod live_tests {
     }
 }
 fn target_for_job(job: &Job) -> Result<DetectedIme, String> {
-    let target = detect()?;
-    if target.version != job.version {
-        return Err("输入法版本发生变化，请重新打开助手".into());
+    match detect() {
+        Ok(target) => {
+            if target.version != job.version {
+                return Err("输入法版本发生变化，请重新打开助手".into());
+            }
+            Ok(target)
+        }
+        Err(err) if matches!(job.action, Action::Recover) => {
+            let target = DetectedIme {
+                skin: skin_for(&job.version),
+                version: job.version.clone(),
+            };
+            let store = store_for(&target)?;
+            if store.recovery_needed()? {
+                Ok(target)
+            } else {
+                Err(err)
+            }
+        }
+        Err(err) => Err(err),
     }
-    Ok(target)
 }
 
 fn preflight_target(job: &Job, target: &DetectedIme) -> Result<(), String> {

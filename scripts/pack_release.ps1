@@ -1,6 +1,7 @@
 param(
   [string]$DesktopName,
-  [switch]$Development
+  [switch]$Development,
+  [switch]$NoDesktop
 )
 $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
@@ -30,20 +31,23 @@ try {
   if ($binaryVersion -ne $conf.version) { throw "Built product version mismatch: $binaryVersion" }
   $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
   $flavor = if ($Development) { 'test' } else { 'release' }
-  $name = "DoubaoIME Darkmode-$($conf.version)-$flavor-$commit-$stamp.exe"
+  $name = "DoubaoIME_Darkmode-$($conf.version)-$flavor-$commit-$stamp.exe"
   $dist = Join-Path $root 'dist'
   New-Item -ItemType Directory -Force -Path $dist | Out-Null
   $out = Join-Path $dist $name
   [System.IO.File]::Copy($exe, $out, $false)
-  if (-not $DesktopName) { $DesktopName = $name }
-  if ([System.IO.Path]::GetFileName($DesktopName) -ne $DesktopName -or -not $DesktopName.EndsWith('.exe')) {
-    throw 'DesktopName must be a filename ending in .exe'
-  }
-  $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) $DesktopName
-  # Never overwrite an existing desktop build, including the user's working version.
-  [System.IO.File]::Copy($out, $desktop, $false)
   $hash = (Get-FileHash -LiteralPath $out -Algorithm SHA256).Hash
-  if ((Get-FileHash -LiteralPath $desktop -Algorithm SHA256).Hash -ne $hash) { throw 'Copy hash mismatch' }
+  $desktop = $null
+  if (-not $NoDesktop) {
+    if (-not $DesktopName) { $DesktopName = $name }
+    if ([System.IO.Path]::GetFileName($DesktopName) -ne $DesktopName -or -not $DesktopName.EndsWith('.exe')) {
+      throw 'DesktopName must be a filename ending in .exe'
+    }
+    $desktop = Join-Path ([Environment]::GetFolderPath('Desktop')) $DesktopName
+    # Never overwrite an existing desktop build, including the user's working version.
+    [System.IO.File]::Copy($out, $desktop, $false)
+    if ((Get-FileHash -LiteralPath $desktop -Algorithm SHA256).Hash -ne $hash) { throw 'Copy hash mismatch' }
+  }
   $metadata = [ordered]@{
     path = $out; desktop = $desktop; version = $conf.version
     commit = $commit; flavor = $flavor; size = $item.Length; sha256 = $hash

@@ -162,10 +162,25 @@ impl Store {
         }
         let staging = self.root.join("dmdm_backup_pending");
         if staging.try_exists().map_err(|e| e.to_string())? {
-            return Err(
-                "发现未完成的首次备份 dmdm_backup_pending；原皮肤未覆盖，请先检查并保留该目录"
-                    .into(),
-            );
+            let live = self.read_set(&self.root).map_err(|e| {
+                format!("发现未完成的首次备份 dmdm_backup_pending，且当前皮肤无法核验：{e}")
+            })?;
+            if Self::hashes(&live) != self.official {
+                return Err(
+                    "发现未完成的首次备份 dmdm_backup_pending；当前皮肤已变化，请先检查并保留该目录"
+                        .into(),
+                );
+            }
+            let stamp = std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_err(|e| e.to_string())?
+                .as_secs();
+            let isolated = self
+                .root
+                .join(format!("dmdm_backup_pending_saved_{stamp}"));
+            fs::rename(&staging, &isolated).map_err(|e| {
+                format!("无法隔离未完成的首次备份，请保留 dmdm_backup_pending：{e}")
+            })?;
         }
         fs::create_dir(&staging).map_err(|e| e.to_string())?;
         for (rel, bytes) in originals {
@@ -393,6 +408,35 @@ mod tests {
         assert!(store
             .apply(&next, &Store::hashes(&original), "new", "j")
             .is_err());
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn unfinished_first_backup_retries_when_live_is_still_original() {
+        let (root, store, original, next) = fixture();
+        let pending = root.join("dmdm_backup_pending");
+        fs::create_dir(&pending).unwrap();
+        safe_fs::atomic_write(&pending.join("a.svg"), b"stale").unwrap();
+        store
+            .apply(&next, &Store::hashes(&original), "new", "j")
+            .unwrap();
+        assert!(root.join(BACKUP).is_dir());
+        assert!(!pending.exists());
+        assert!(fs::read_dir(&root)
+            .unwrap()
+            .flatten()
+            .any(|e| e.file_name().to_string_lossy().starts_with("dmdm_backup_pending_saved_")));
+        fs::remove_dir_all(root).unwrap();
+    }
+    #[test]
+    fn unfinished_first_backup_stops_when_live_changed() {
+        let (root, store, _original, next) = fixture();
+        fs::create_dir(root.join("dmdm_backup_pending")).unwrap();
+        safe_fs::atomic_write(&root.join("a.svg"), b"changed").unwrap();
+        let expected = store.live_hashes().unwrap();
+        assert!(store.apply(&next, &expected, "new", "j").is_err());
+        assert!(root.join("dmdm_backup_pending").is_dir());
+        assert!(!root.join(BACKUP).exists());
+        assert_eq!(store.live_hashes().unwrap()["a.svg"], safe_fs::hash(b"changed"));
         fs::remove_dir_all(root).unwrap();
     }
     #[test]

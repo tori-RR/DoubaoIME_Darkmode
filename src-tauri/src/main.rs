@@ -22,6 +22,9 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 static INSTALL_LOCK: Mutex<()> = Mutex::new(());
+static JOB_BUSY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static WANT_EXIT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+static ALLOW_CLOSE: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
 use theme::{
     clamp_glass_opacity, dark_colors, generate_toolbar_preview, glass_enabled, light_colors,
     mix_colors, ThemeColors, ToolbarPreview, GLASS_OPACITY_DEFAULT,
@@ -233,7 +236,7 @@ fn next_custom_id(themes: &[NamedTheme]) -> String {
 
 fn current_status() -> AppStatus {
     let state = load_state();
-    let target = skin::detect();
+    let target = skin::detect_for_status();
     let (structure_matches, structure_detail) = match &target {
         Ok(target) => match skin::inspect_structure(&target.skin) {
             Ok(()) => (
@@ -312,6 +315,9 @@ fn current_status() -> AppStatus {
     if workdir::user_logo_path().exists() && logo.is_none() {
         warning = "头像无法读取，请重新选择图片；原文件已保留".into();
     }
+    if workdir::restart_pending_version().is_some() && warning.is_empty() {
+        warning = "皮肤操作已结束，但输入法尚未恢复；请手动打开豆包输入法，或重新打开本助手".into();
+    }
     if state_path().exists()
         && safe_fs::read(&state_path(), 1024 * 1024)
             .ok()
@@ -350,7 +356,7 @@ fn current_status() -> AppStatus {
     }
 }
 fn prepare_job(action: skin::Action, colors: Option<ThemeColors>) -> Result<skin::Job, String> {
-    let target = skin::detect()?;
+    let target = skin::detect_for_status()?;
     let store = skin::store_for(&target)?;
     let action = if store.recovery_needed()? {
         skin::Action::Recover
@@ -450,11 +456,17 @@ async fn import_logo(request: tauri::ipc::Request<'_>) -> Result<AppStatus, Stri
     .map_err(|e| e.to_string())?
 }
 #[tauri::command]
-async fn install(colors: Option<ThemeColors>) -> Result<AppStatus, String> {
-    perform(skin::Action::Apply, colors).await
+async fn install(app: tauri::AppHandle, colors: Option<ThemeColors>) -> Result<AppStatus, String> {
+    perform(app, skin::Action::Apply, colors).await
 }
-async fn perform(action: skin::Action, colors: Option<ThemeColors>) -> Result<AppStatus, String> {
-    tauri::async_runtime::spawn_blocking(move || {
+async fn perform(
+    app: tauri::AppHandle,
+    action: skin::Action,
+    colors: Option<ThemeColors>,
+) -> Result<AppStatus, String> {
+    use std::sync::atomic::Ordering;
+    JOB_BUSY.store(true, Ordering::SeqCst);
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let _guard = INSTALL_LOCK.try_lock().map_err(|_| "另一次操作尚未完成")?;
         let _state = state_lock()?;
         // Backups intentionally survive uninstall. Their presence alone must
@@ -473,11 +485,17 @@ async fn perform(action: skin::Action, colors: Option<ThemeColors>) -> Result<Ap
         Ok(current_status())
     })
     .await
-    .map_err(|e| e.to_string())?
+    .map_err(|e| e.to_string());
+    JOB_BUSY.store(false, Ordering::SeqCst);
+    if WANT_EXIT.load(Ordering::SeqCst) {
+        ALLOW_CLOSE.store(true, Ordering::SeqCst);
+        app.exit(0);
+    }
+    result?
 }
 #[tauri::command]
-async fn uninstall() -> Result<AppStatus, String> {
-    perform(skin::Action::Restore, None).await
+async fn uninstall(app: tauri::AppHandle) -> Result<AppStatus, String> {
+    perform(app, skin::Action::Restore, None).await
 }
 
 #[tauri::command]
@@ -704,12 +722,18 @@ fn main() {
         std::process::exit(code);
     }
     migrate_legacy_state();
+    if let Some(version) = workdir::restart_pending_version() {
+        if ime_process::restart(Path::new(skin::IME_ROOT), &version).is_ok() {
+            workdir::clear_restart_pending();
+        }
+    }
     let webview_dir = workdir::ensure_app_dir()
         .expect("工作目录不可写")
         .join("webview")
         .join(&safe_fs::hash(std::env::var("USERNAME").unwrap_or_default().as_bytes())[..16]);
     tauri::Builder::default()
         .setup(move |app| {
+            use std::sync::atomic::Ordering;
             let cfg = app
                 .config()
                 .app
@@ -721,7 +745,19 @@ fn main() {
             if workdir::review_mode() {
                 window = window.title("DoubaoIME Darkmode · 检查模式");
             }
-            window.build()?;
+            let win = window.build()?;
+            win.on_window_event({
+                let win = win.clone();
+                move |event| {
+                    if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        if JOB_BUSY.load(Ordering::SeqCst) && !ALLOW_CLOSE.load(Ordering::SeqCst) {
+                            api.prevent_close();
+                            WANT_EXIT.store(true, Ordering::SeqCst);
+                            let _ = win.hide();
+                        }
+                    }
+                }
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -746,8 +782,16 @@ fn main() {
             open_public_repo,
             get_kaomoji_groups
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building tauri application")
+        .run(|_app, event| {
+            use std::sync::atomic::Ordering;
+            if let tauri::RunEvent::ExitRequested { api, .. } = event {
+                if JOB_BUSY.load(Ordering::SeqCst) && !ALLOW_CLOSE.load(Ordering::SeqCst) {
+                    api.prevent_exit();
+                }
+            }
+        });
 }
 
 #[cfg(test)]
