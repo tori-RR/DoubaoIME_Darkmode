@@ -1,0 +1,195 @@
+# DoubaoIME Darkmode
+
+一个为 **Windows 豆包输入法** 制作的主题修改工具
+
+豆包输入法语音识别功能非常好用，但windows版目前只提供了白色主题，对深色模式下打字输入不太友好，于是做了这个皮肤插件。
+
+> 主题通过读取已安装的输入法资源生成，不直接携带或分发官方皮肤文件
+
+
+---
+
+## 功能
+
+### 主题
+#### Dark
+<png> dark.png <png>
+
+#### Midlight
+<png> midlight.png <png>
+
+目前支持：
+
+- 预设主题：Dark / Light / Midlight 
+- 自定义主题颜色和字体颜色
+- 候选栏字体修改
+- 候选栏透明度调整
+- 自定义工具栏头像
+
+### 工具栏
+
+目前输入法关闭悬浮工具栏后，似乎没有明显的入口可以重新打开
+因此在插件的右键菜单中添加了：
+
+- 输入法设置入口
+- 工具栏开关
+
+
+
+---
+
+## 使用方法
+
+从 Releases 下载：
+
+```text
+DoubaoIME Darkmode.exe
+```
+
+启动后选择主题、字体、透明度或头像，然后点击安装即可
+
+程序需要修改：
+
+```text
+C:\Program Files\DoubaoIME
+```
+
+因此安装或卸载主题时 Windows 会请求管理员权限
+
+需要恢复官方皮肤时，点击卸载即可从安装主题时创建的备份恢复原始文件
+
+---
+
+## 文件位置
+
+插件保存的配置位于：
+
+```text
+C:\tmp\DoubaoIME Darkmode\
+```
+
+主要包括：
+
+```text
+DoubaoIME Darkmode.json
+logo.png
+```
+
+其中 `logo.png` 仅在使用自定义工具栏头像时存在。
+
+豆包输入法原始皮肤文件的备份保存在对应版本的：
+
+```text
+skin\default\dmdm_backup\
+```
+
+卸载主题时会使用这里的文件恢复官方皮肤。
+
+---
+
+## 原理
+
+插件会读取本机输入法 `skin/default` 中的原始 SVG / XML / PNG 资源，根据用户选择的颜色、字体、透明度和头像生成新的皮肤文件，然后写回对应目录
+
+项目主要修改：
+
+```text
+候选栏背景
+候选文字 / 选中颜色
+候选栏字体
+翻页按钮
+悬浮工具栏背景
+悬浮工具栏图标
+工具栏头像
+```
+
+不修改：
+
+```text
+ImeService.exe
+ui.dll
+tsf-oime.dll
+```
+
+
+
+---
+
+## 兼容性
+
+目前已验证：
+
+```text
+豆包输入法 v0.9.0.0 Windows
+```
+
+程序启动时会检查输入法的目录结构，后续官方更新可能改变皮肤结构，不能保证后续版本兼容
+
+如果检测到当前输入法结构与已验证版本不一致，会提示可能不兼容，并阻止直接安装主题
+
+
+
+
+---
+
+## 注意事项
+
+- 豆包输入法更新后可能覆盖主题，需要重新安装
+
+- 如果官方皮肤目录结构发生变化，本工具可能暂时无法使用
+
+- 不建议删除 `dmdm_backup`，否则可能影响主题卸载和官方皮肤恢复
+
+  
+
+
+---
+
+## 声明
+
+本仓库不包含豆包输入法官方 SVG / XML / PNG 皮肤资源及其修改版本
+
+所有主题文件均在点击「安装」时，根据本机已安装的输入法资源即时生成
+
+
+
+
+---
+
+## 编译
+
+需要：
+
+```text
+Node.js
+Rust
+Tauri 2
+WebView2
+```
+
+安装依赖：
+
+```powershell
+npm ci
+```
+
+开发模式：
+
+```powershell
+npm run dev
+```
+
+构建 portable Release：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\pack_release.ps1
+```
+
+构建结果：
+
+```text
+dist\DoubaoIME Darkmode.exe
+```
+
+
+
