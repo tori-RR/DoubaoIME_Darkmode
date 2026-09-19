@@ -2,9 +2,9 @@
 
 一个为 **Windows 豆包输入法** 制作的主题修改工具
 
-豆包输入法语音识别功能非常好用，但windows版目前只提供了白色主题，对深色模式下打字输入不太友好，于是做了这个皮肤插件。
+豆包输入法语音识别功能非常好用，但windows版目前只提供了白色主题，对深色模式下打字输入不太友好，于是做了这个皮肤插件
 
-> 主题通过读取已安装的输入法资源生成，不直接携带或分发官方皮肤文件
+> 主题通过读取已安装的输入法资源生成，不携带或分发官方皮肤文件
 
 
 ---
@@ -28,7 +28,7 @@
 
 ### 工具栏
 
-目前输入法关闭悬浮工具栏后，似乎没有明显的入口可以重新打开
+目前输入法关闭悬浮工具栏后，似乎没有明显的打开入口
 因此在插件的右键菜单中添加了：
 
 - 输入法设置入口
@@ -46,7 +46,7 @@
 DoubaoIME_Darkmode.exe
 ```
 
-启动后选择主题、字体、透明度或头像，然后点击安装即可
+启动后选择主题、字体、透明度或头像，然后安装即可
 
 程序需要修改：
 
@@ -72,10 +72,12 @@ C:\tmp\DoubaoIME Darkmode\
 
 ```text
 DoubaoIME Darkmode.json
+DoubaoIME Darkmode.json.bak
 logo.png
+webview\
 ```
 
-其中 `logo.png` 仅在使用自定义工具栏头像时存在。
+其中 `logo.png` 仅在使用自定义工具栏头像时存在
 
 豆包输入法原始皮肤文件的备份保存在对应版本的：
 
@@ -83,7 +85,7 @@ logo.png
 skin\default\dmdm_backup\
 ```
 
-卸载主题时会使用这里的文件恢复官方皮肤。
+卸载主题时会使用这里的文件恢复官方皮肤
 
 ---
 
@@ -117,7 +119,7 @@ tsf-oime.dll
 
 ## 兼容性
 
-目前已验证：
+已验证：
 
 ```text
 豆包输入法 v0.9.0.0 Windows
@@ -138,7 +140,9 @@ tsf-oime.dll
 
 - 如果官方皮肤目录结构发生变化，本工具可能暂时无法使用
 
-- 不建议删除 `dmdm_backup`，否则可能影响主题卸载和官方皮肤恢复
+- 谨慎删除 `dmdm_backup`，否则可能影响主题卸载和官方皮肤恢复
+
+- 请先保留中断安装留下的备份暂存目录
 
   
 
@@ -147,51 +151,10 @@ tsf-oime.dll
 
 ## 声明
 
-本仓库不包含豆包输入法官方 SVG / XML / PNG 皮肤资源及其修改版本
+本项目为独立的第三方小工具，不是官方插件，也不代表官方支持
+
+仓库不包含豆包输入法官方 SVG / XML / PNG 皮肤资源及其修改版本
 
 所有主题文件均在点击「安装」时，根据本机已安装的输入法资源即时生成
 
 本仓库以 MIT License 发布，详见 [LICENSE](LICENSE)。
-
-
-
-
----
-
-## 编译
-
-需要：
-
-```text
-Node.js
-Rust
-Tauri 2
-WebView2
-```
-
-安装依赖：
-
-```powershell
-npm ci
-```
-
-开发模式：
-
-```powershell
-npm run dev
-```
-
-构建 portable Release：
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\pack_release.ps1
-```
-
-构建结果：
-
-```text
-dist\DoubaoIME Darkmode.exe
-```
-
-
-
