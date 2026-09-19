@@ -1,0 +1,27 @@
+Thumbs.db
+Desktop.ini
+*.log
+.DS_Store
+__pycache__/
+*.pyc
+
+# Official installer binary and any unpack of it. Do not commit.
+official_installer_sample/
+
+# Official skin files are ByteDance's. The app reads them from the user's own
+# install at run time; nothing under these dirs may be committed or embedded.
+backup/
+private/
+patch/
+
+# Local helper / icon debug dumps
+.cursor/
+AGENT.md
+src-tauri/icons/_preview/
+src-tauri/icons/_pe_check/
+
+# Tauri / Node
+node_modules/
+src-tauri/target/
+generated/
+dist/

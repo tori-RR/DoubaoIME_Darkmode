@@ -1,0 +1,161 @@
+html.preview-lab,
+html.preview-lab body {
+  height: auto;
+  min-height: 100%;
+  overflow: auto;
+}
+
+.lab {
+  display: grid;
+  grid-template-columns: 440px minmax(420px, 1fr);
+  gap: 28px;
+  align-items: start;
+  padding: 24px;
+}
+
+@media (max-width: 1080px) {
+  .lab {
+    grid-template-columns: 1fr;
+  }
+
+  .tuner {
+    position: static;
+  }
+}
+
+.preview-only {
+  max-width: 440px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+}
+
+.preview-only .lede {
+  margin-bottom: 0;
+}
+
+.preview-only code {
+  color: var(--text);
+}
+
+/* 胶囊几何对齐官方 status_bar_bg.svg：143×32 rx=5，落在 156×45 窗的 (6.5, 4.2) */
+.toolbar-capsule {
+  position: absolute;
+  left: 6.5px;
+  top: 4.2px;
+  width: 143px;
+  height: 32px;
+  border-radius: 5px;
+  background: #2a2a2a;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
+}
+
+.mock-logo {
+  display: block;
+  border-radius: 50%;
+  background: #2a2a2a;
+}
+
+.mock-divider {
+  display: block;
+  background: rgba(242, 242, 242, 0.14);
+}
+
+.mock-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #e8e8e8;
+  font-family: "Microsoft YaHei", sans-serif;
+  font-size: var(--toolbar-type-size);
+  font-weight: var(--toolbar-type-weight);
+  line-height: 1;
+}
+
+.tuner {
+  position: sticky;
+  top: 24px;
+  padding: 16px 16px 18px;
+  background: #0c0c0c;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.tuner h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.tuner > p {
+  margin: 8px 0 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tuner-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.tuner-actions button {
+  height: 34px;
+}
+
+.tuner-list {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 14px;
+}
+
+.tuner-row {
+  display: grid;
+  grid-template-columns: 78px 1fr 56px;
+  align-items: center;
+  gap: 8px;
+}
+
+.tuner-row span,
+.tuner-row output {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.tuner-row output {
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.tuner-row input[type="range"] {
+  width: 100%;
+  height: 4px;
+  margin: 0;
+  accent-color: #8a8a8a;
+}
+
+.tuner-dump {
+  margin: 14px 0 0;
+  max-height: 180px;
+  overflow: auto;
+  padding: 8px 10px;
+  color: var(--muted);
+  background: #111;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: 11px/1.45 ui-monospace, Consolas, monospace;
+  white-space: pre;
+}
+
+.toolbar-mock .toolbar-icon {
+  width: 24px;
+  height: 24px;
+  flex-basis: 24px;
+}
+
+.toolbar-mock .mock-icon svg {
+  width: 19.2px;
+  height: 19.2px;
+}

@@ -1,0 +1,122 @@
+(function () {
+  const GROUPS = {
+    casual: [],
+    welcome: [],
+    great: [],
+    cancel: [],
+    bad: [],
+    sleep: [],
+    wake: [],
+  };
+  const FILES = {
+    casual: "Group_casual.txt",
+    welcome: "Group_welcom.txt",
+    great: "Group_great.txt",
+    cancel: "Group_cancel.txt",
+    bad: "Group_bad.txt",
+    sleep: "Group_sleep.txt",
+    wake: "Group_wake.txt",
+  };
+
+  const word = document.getElementById("kaomoji-word");
+  if (!word) return;
+
+  const COOLDOWN_MS = 300;
+  let lastRoll = 0;
+  let ready = false;
+
+  function parseFaces(text) {
+    const out = [];
+    const seen = new Set();
+    for (const line of String(text || "").split(/\r?\n/)) {
+      const face = line.trim();
+      if (!face || seen.has(face)) continue;
+      seen.add(face);
+      out.push(face);
+    }
+    return out;
+  }
+
+  function pick(group, force) {
+    const pool = (GROUPS[group] && GROUPS[group].length && GROUPS[group]) || GROUPS.casual;
+    if (!pool.length) return;
+    const now = Date.now();
+    if (!force && now - lastRoll < COOLDOWN_MS) return;
+    lastRoll = now;
+    const current = word.textContent;
+    const choices = pool.filter((face) => face !== current);
+    const next = (choices.length ? choices : pool)[Math.floor(Math.random() * (choices.length || pool.length))];
+    word.textContent = next;
+    word.classList.remove("shake");
+    void word.offsetWidth;
+    word.classList.add("shake");
+  }
+
+  function isFontFace(el) {
+    return !!(el && (el.id === "font-face" || (el.closest && el.closest("#font-face"))));
+  }
+
+  function isActionButton(el) {
+    return !!(
+      el &&
+      el.closest &&
+      el.closest("#btn-install, #btn-uninstall, #btn-clear-logo, #btn-preview-bg")
+    );
+  }
+
+  function inForm(el) {
+    if (isFontFace(el)) return false;
+    return !!(el && el.closest && el.closest("input, textarea, select, [contenteditable='true']"));
+  }
+
+  document.addEventListener("click", (e) => {
+    if (!ready || inForm(e.target) || isActionButton(e.target)) return;
+    pick("casual", false);
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (!ready || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (inForm(e.target)) return;
+    if (e.isComposing && !isFontFace(e.target)) return;
+    if (e.key.length === 1 || e.key === "Enter" || e.key === "Backspace") pick("casual", false);
+  });
+
+  document.addEventListener("compositionend", (e) => {
+    if (!ready || inForm(e.target) || !e.data) return;
+    pick("casual", false);
+  });
+
+  const fontFace = document.getElementById("font-face");
+  if (fontFace) {
+    fontFace.addEventListener("input", () => {
+      if (ready) pick("casual", false);
+    });
+  }
+
+  window.Kaomoji = {
+    show(group) {
+      pick(group, true);
+    },
+  };
+
+  async function loadGroups() {
+    if (window.__TAURI__) {
+      const data = await window.__TAURI__.core.invoke("get_kaomoji_groups");
+      Object.assign(GROUPS, data || {});
+      return;
+    }
+    await Promise.all(
+      Object.entries(FILES).map(async ([key, file]) => {
+        const res = await fetch(`../kaomoji/${file}`);
+        GROUPS[key] = parseFaces(await res.text());
+      })
+    );
+  }
+
+  loadGroups()
+    .catch(() => {})
+    .then(() => {
+      ready = true;
+      pick("welcome", true);
+    });
+})();

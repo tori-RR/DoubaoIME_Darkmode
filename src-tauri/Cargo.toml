@@ -1,0 +1,30 @@
+[package]
+name = "doubaoime-darkmode"
+version = "1.0.0"
+description = "Doubao IME candidate-bar and toolbar skin helper"
+authors = ["tori"]
+edition = "2021"
+license = "MIT"
+publish = false
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "bmp", "webp"] }
+pinyin = "0.10"
+sha2 = "0.10"
+quick-xml = "0.42"
+regex = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tauri = { version = "2", features = [] }
+windows = { version = "0.61", features = ["Win32_Foundation", "Win32_Graphics_DirectWrite", "Win32_Graphics_Direct2D_Common", "Win32_Graphics_Dxgi_Common"] }
+
+[profile.release]
+panic = "abort"
+lto = true
+codegen-units = 1
+
+[dev-dependencies]
+png = "0.17"

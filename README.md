@@ -151,6 +151,8 @@ tsf-oime.dll
 
 所有主题文件均在点击「安装」时，根据本机已安装的输入法资源即时生成
 
+本仓库以 MIT License 发布，详见 [LICENSE](LICENSE)。
+
 
 
 

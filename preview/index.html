@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="zh-CN" class="preview-lab">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>预览 · DoubaoIME Darkmode</title>
+    <link rel="stylesheet" href="../ui/styles.css" />
+    <link rel="stylesheet" href="./mock.css" />
+  </head>
+  <body>
+    <div class="lab">
+      <main class="app preview-only">
+        <header>
+          <h1>DoubaoIME <span class="mark">Darkmode</span></h1>
+          <p class="lede">输入法皮肤小助手</p>
+          <p class="plugin-state on">
+            <span class="dot" aria-hidden="true"></span>
+            <span>v0.9.0.0</span>
+          </p>
+        </header>
+
+        <section class="preview" aria-label="预览">
+          <div class="toolbar toolbar-mock">
+            <div class="toolbar-capsule" aria-hidden="true"></div>
+            <div class="toolbar-row">
+              <span class="toolbar-logo mock-logo" aria-hidden="true"></span>
+              <span class="toolbar-divider mock-divider" aria-hidden="true"></span>
+              <span class="toolbar-icon toolbar-mic mock-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="19.2" height="19.2">
+                  <rect x="9" y="3.5" width="6" height="10" rx="3" fill="none" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M6.5 11.5a5.5 5.5 0 0 0 11 0" fill="none" stroke="currentColor" stroke-width="1.6" />
+                  <path d="M12 17v3.2" fill="none" stroke="currentColor" stroke-width="1.6" />
+                </svg>
+              </span>
+              <span class="toolbar-icon mock-icon">中</span>
+              <span class="toolbar-icon toolbar-punct mock-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="19.2" height="19.2">
+                  <ellipse cx="12" cy="8.7" rx="2.15" ry="2.45" fill="currentColor" />
+                  <ellipse cx="12" cy="16.15" rx="1.5" ry="1.6" fill="currentColor" />
+                </svg>
+              </span>
+              <span class="toolbar-icon mock-icon">半</span>
+            </div>
+          </div>
+          <div class="bar-frame">
+            <div id="preview-bar" class="bar">
+              <span class="chip on"><i>1</i><span id="greet-word">早上好</span></span>
+              <span class="chip"><i>2</i>hello</span>
+              <span class="chip"><i>3</i><span id="kaomoji-word">ε = = (づ′▽`)づ</span></span>
+              <span class="more" aria-hidden="true">
+                <svg viewBox="0 0 20 20" width="20" height="20">
+                  <path d="M4.96436 7.5L9.9999 12.5L15.0354 7.5" fill="none" stroke="currentColor" stroke-opacity="0.72" stroke-width="1.30125" stroke-linejoin="round" />
+                </svg>
+              </span>
+            </div>
+          </div>
+        </section>
+
+        <p class="plugin-state off">
+          <span class="dot" aria-hidden="true"></span>
+          <span>未安装</span>
+        </p>
+        <div class="control-row">
+          <label class="field">
+            <span>主题</span>
+            <input type="text" value="Dark" readonly />
+          </label>
+          <div class="row-actions">
+            <button type="button">安装</button>
+            <button type="button" class="ghost">卸载</button>
+          </div>
+        </div>
+        <div class="control-row">
+          <label class="field">
+            <span>字体</span>
+            <input type="text" value="微软雅黑" readonly />
+          </label>
+          <section class="logo-field">
+            <span>工具栏头像</span>
+            <div class="logo-row">
+              <button type="button">选择图片</button>
+              <button type="button" class="ghost">用官方图</button>
+            </div>
+          </section>
+        </div>
+        <p class="hint font-hint">上传并替换工具栏头像，默认和主题文件保存目录：<br />"C:\tmp\DoubaoIME Darkmode"</p>
+      </main>
+
+      <aside class="tuner" aria-label="字号字重">
+        <h2>字号 / 字重</h2>
+        <p>只作用于本页。调完复制右边的值，再决定是否写回正式样式。</p>
+        <div class="tuner-actions">
+          <button id="tuner-copy" type="button">复制当前值</button>
+          <button id="tuner-reset" type="button" class="ghost">恢复默认</button>
+        </div>
+        <div id="tuner-list" class="tuner-list"></div>
+        <pre id="tuner-dump" class="tuner-dump"></pre>
+      </aside>
+    </div>
+    <script src="../ui/greeting.js"></script>
+    <script src="../ui/kaomoji.js"></script>
+    <script src="./tune.js"></script>
+  </body>
+</html>

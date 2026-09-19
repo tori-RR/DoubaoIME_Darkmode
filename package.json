@@ -1,0 +1,15 @@
+{
+  "name": "doubaoime-darkmode",
+  "private": true,
+  "version": "1.0.0",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "dev": "tauri dev",
+    "preview": "npx --yes live-server --port=1420 --no-browser --open=/preview/ --watch=ui,preview",
+    "build": "tauri build"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.9.6"
+  }
+}
