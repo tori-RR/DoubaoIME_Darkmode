@@ -13,10 +13,10 @@
 
 ### 主题
 #### Dark
-<png> dark.png xxx信号弱xxx <png>
+![Dark](sample/dark.png)
 
 #### Midlight
-<png> midlight.png xxx信号弱xxx <png>
+![Midlight](sample/midlight.png)
 
 目前支持：
 
