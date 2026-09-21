@@ -24,6 +24,7 @@
 - 候选栏字体修改
 - 候选栏透明度调整
 - 自定义工具栏头像
+- 自定义任务栏头像
 
 ### 工具栏
 
@@ -39,11 +40,15 @@
 
 ## 使用方法
 
+从 [Releases](https://github.com/tori-RR/DoubaoIME_Darkmode/releases) 下载 `DoubaoIME_Darkmode.exe`
+
 启动后选择主题、字体、透明度或头像，然后安装生效
 
 需要恢复官方皮肤时，点击卸载即可从安装主题时创建的备份恢复原始文件
 
 > 安装或卸载主题时程序需要修改：`C:\Program Files\DoubaoIME` 因此会请求管理员权限
+>
+> 任务栏图标变更后会刷新资源管理器，屏幕会短暂闪烁
 
 
 
@@ -68,10 +73,11 @@ C:\tmp\DoubaoIME Darkmode\
 DoubaoIME Darkmode.json
 DoubaoIME Darkmode.json.bak
 logo.png
+taskbar-icons\
 webview\
 ```
 
-其中 `logo.png` 仅在使用自定义工具栏头像时存在
+其中 `logo.png` 和 `taskbar-icons\` 只在使用自定义图标时产生
 
 豆包输入法原始皮肤文件的备份保存在对应版本的：
 
@@ -96,7 +102,7 @@ skin\default\dmdm_backup\
 
 ## 声明
 
-本项目为独立的第三方小工具，不是官方插件，也不代表官方支持
+本项目为独立第三方工具，非官方插件，也不代表官方支持
 
 仓库不包含豆包输入法官方 SVG / XML / PNG 皮肤资源及其修改版本 
 
