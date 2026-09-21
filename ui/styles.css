@@ -556,10 +556,116 @@ h1 .mark {
 
 #kaomoji-word {
   display: inline-block;
+  white-space: pre-wrap;
 }
 
 #kaomoji-word.shake {
   animation: kaomoji-shake 0.28s ease;
+}
+
+.kaomoji-gallery {
+  display: block;
+  margin: 18px 0 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #151515;
+}
+
+.kaomoji-gallery-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+.kaomoji-gallery-title {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.kaomoji-gallery-head span {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.kaomoji-refresh {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: transparent;
+  cursor: pointer;
+}
+
+.kaomoji-refresh:hover,
+.kaomoji-refresh:focus-visible {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
+.kaomoji-refresh:disabled {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.kaomoji-refresh.is-loading svg {
+  animation: kaomoji-refresh-spin 0.75s linear infinite;
+}
+
+.kaomoji-group + .kaomoji-group {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.kaomoji-group-title {
+  margin: 0 0 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.kaomoji-group-list {
+  display: grid;
+  gap: 4px;
+}
+
+.kaomoji-item {
+  display: block;
+  width: 100%;
+  min-height: 28px;
+  padding: 4px 8px;
+  overflow: visible;
+  border: 1px solid #292929;
+  border-radius: 6px;
+  background: #1b1b1b;
+  color: var(--text);
+  font: inherit;
+  line-height: 1.45;
+  text-align: left;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  user-select: text;
+  -webkit-user-select: text;
+  cursor: pointer;
+}
+
+.kaomoji-item:hover,
+.kaomoji-item:focus-visible {
+  border-color: #545454;
+  background: #242424;
+  outline: none;
 }
 
 @keyframes kaomoji-shake {
@@ -576,6 +682,10 @@ h1 .mark {
   75% {
     transform: translateX(-1px);
   }
+}
+
+@keyframes kaomoji-refresh-spin {
+  to { transform: rotate(360deg); }
 }
 
 .bar .more {
