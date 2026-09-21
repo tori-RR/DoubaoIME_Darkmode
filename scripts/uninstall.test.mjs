@@ -34,7 +34,7 @@ function clickUninstall(overrides = {}) {
   };
   for (const name of ["setWorkdirTip", "refreshThemeChoices", "setThemeInput",
     "closeColorCard", "setPickers", "setFontInputs", "setGlassInput",
-    "paintThemeActions", "paintPreview", "paintIme", "paintPlugin"]) {
+    "paintThemeActions", "paintPreview", "paintIconPreviews", "paintIme", "paintPlugin"]) {
     context[name] = () => {};
   }
   runInNewContext(`${render}\n${binding}\nrender(status);`, context);

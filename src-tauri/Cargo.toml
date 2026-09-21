@@ -1,6 +1,6 @@
 [package]
 name = "doubaoime-darkmode"
-version = "1.0.0"
+version = "1.0.1"
 description = "Doubao IME candidate-bar and toolbar skin helper"
 authors = ["tori"]
 edition = "2021"

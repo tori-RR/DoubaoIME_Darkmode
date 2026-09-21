@@ -45,7 +45,7 @@ function installDisabled(overrides = {}) {
   const context = { $: get, lastStatus: null, customPanel: null, glassPanel: null, status };
   for (const name of ["setWorkdirTip", "refreshThemeChoices", "setThemeInput",
     "closeColorCard", "setPickers", "setFontInputs", "setGlassInput",
-    "paintThemeActions", "paintPreview", "paintIme", "paintPlugin"]) {
+    "paintThemeActions", "paintPreview", "paintIconPreviews", "paintIme", "paintPlugin"]) {
     context[name] = () => {};
   }
   runInNewContext(`${render}\nrender(status);`, context);
@@ -123,7 +123,7 @@ test("recovery and transient states do not show stale theme tooltips", () => {
   assert.equal(recovery.pluginTipText.textContent, "");
   assert.equal(recovery.pluginTipOff, true);
   assert.match(source,
-    /setPluginHint\("wait", name === "import_logo" \? "处理头像…" : "等待授权"\)/);
+    /setPluginHint\("wait", uploading \? "处理图标…" : "等待授权"\)/);
 });
 
 test("tooltips use the requested directions and compact cache label", () => {

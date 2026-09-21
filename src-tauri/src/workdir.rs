@@ -32,7 +32,8 @@ fn restart_pending_path() -> PathBuf {
 
 pub fn write_restart_pending(version: &str) -> Result<(), String> {
     ensure_app_dir()?;
-    let raw = serde_json::to_vec(&serde_json::json!({ "version": version })).map_err(|e| e.to_string())?;
+    let raw = serde_json::to_vec(&serde_json::json!({ "version": version }))
+        .map_err(|e| e.to_string())?;
     crate::safe_fs::atomic_write(&restart_pending_path(), &raw)
 }
 
@@ -48,6 +49,23 @@ pub fn restart_pending_version() -> Option<String> {
 
 pub fn clear_restart_pending() {
     let _ = fs::remove_file(restart_pending_path());
+}
+
+fn shell_refresh_path() -> PathBuf {
+    app_dir().join("taskbar-refresh.pending")
+}
+
+pub fn shell_refresh_pending() -> bool {
+    shell_refresh_path().exists()
+}
+
+pub fn write_shell_refresh_pending() -> Result<(), String> {
+    ensure_app_dir()?;
+    crate::safe_fs::atomic_write(&shell_refresh_path(), b"1")
+}
+
+pub fn clear_shell_refresh_pending() {
+    let _ = fs::remove_file(shell_refresh_path());
 }
 pub fn new_scratch() -> Result<PathBuf, String> {
     static SEQ: AtomicU64 = AtomicU64::new(0);

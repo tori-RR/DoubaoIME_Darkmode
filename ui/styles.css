@@ -349,7 +349,7 @@ h1 .mark {
 .toolbar-logo {
   width: 26px;
   height: 26px;
-  object-fit: fill;
+  object-fit: contain;
   flex: 0 0 26px;
 }
 
@@ -642,8 +642,9 @@ h1 .mark {
 }
 
 .action-row {
-  grid-template-columns: 1fr auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  column-gap: 8px;
 }
 
 .logo-row {
@@ -657,15 +658,15 @@ h1 .mark {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 10px;
+  flex-wrap: nowrap;
+  gap: 6px;
 }
 
 .row-actions button {
-  min-width: 84px;
-}
-
-#btn-pick-logo {
-  min-width: 72px;
+  flex: none;
+  width: 76px;
+  min-width: 76px;
+  padding: 0;
 }
 
 .control-row button:not(.swatch):not(.color-eyedrop):not(.theme-action):not(.combo-delete):not(.logo-reset) {
@@ -858,18 +859,98 @@ button.ghost {
   margin-bottom: 0;
 }
 
+.icon-fields {
+  display: flex;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.icon-settings-glyph {
+  flex: 0 0 16px;
+}
+
+.icon-field {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 8px;
+  min-width: 0;
+}
+
+.icon-label {
+  color: var(--muted);
+  font-size: var(--label-size);
+  white-space: nowrap;
+}
+
+.icon-action-pop {
+  position: relative;
+  flex: 0 0 38px;
+  width: 38px;
+  height: 38px;
+}
+
+.icon-picker,
+.control-row .icon-picker {
+  display: grid;
+  place-items: center;
+  flex: none;
+  aspect-ratio: 1;
+  width: 38px;
+  min-width: 38px;
+  max-width: 38px;
+  height: 38px;
+  min-height: 38px;
+  max-height: 38px;
+  padding: 0;
+  color: var(--muted);
+  border-radius: 9px;
+}
+
+.icon-picker img {
+  display: block;
+  aspect-ratio: 1;
+  width: 26px;
+  height: 26px;
+  object-fit: contain;
+}
+
+.icon-picker img:not([hidden]) + .icon-placeholder {
+  display: none;
+}
+
 .logo-reset,
 .control-row .logo-reset {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 38px;
-  padding: 0 2px;
+  position: absolute;
+  top: 5px;
+  left: 100%;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  min-width: 54px;
+  height: 28px;
+  padding: 0;
   border: 0;
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 6px;
+  /* Overlay the label without reserving space; fade into the page at both edges. */
+  background: linear-gradient(to right, transparent, var(--bg) 8px, var(--bg) calc(100% - 8px), transparent);
   color: var(--muted);
   line-height: 1;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-6px);
+  transition: opacity 280ms ease, transform 280ms ease;
+}
+
+.icon-action-pop:hover .logo-reset,
+.icon-action-pop:focus-within .logo-reset {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+  transition-duration: 140ms;
 }
 
 .logo-reset svg {
@@ -879,12 +960,41 @@ button.ghost {
 .logo-reset:hover:not(:disabled),
 .control-row .logo-reset:hover:not(:disabled) {
   border: 0;
-  background: transparent;
   color: var(--text);
 }
 
-.logo-reset:disabled {
+.icon-action-pop:hover .logo-reset:disabled,
+.icon-action-pop:focus-within .logo-reset:disabled {
+  opacity: 1;
+  pointer-events: none;
+}
+
+.logo-reset:disabled svg {
   opacity: 0.45;
+}
+
+.control-row .logo-reset:focus-visible {
+  outline-offset: -4px;
+}
+
+#taskbar-icon-tip {
+  margin-left: -1px;
+}
+
+#taskbar-icon-tip .ime-tip-bubble {
+  left: auto;
+  right: 0;
+  top: auto;
+  bottom: calc(100% + 8px);
+  max-width: none;
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-reset,
+  .control-row .logo-reset {
+    transition: none;
+  }
 }
 
 .field {

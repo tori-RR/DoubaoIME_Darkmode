@@ -244,28 +244,57 @@
       </div>
 
       <div class="control-row action-row">
-        <section class="logo-field field-inline" aria-label="工具栏头像">
-          <svg class="field-glyph" viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" />
-            <circle cx="9" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="2" />
-            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+        <section class="icon-fields" aria-label="图标设置">
+          <svg class="field-glyph icon-settings-glyph" viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect width="18" height="18" x="3" y="3" rx="2" />
+            <circle cx="9" cy="9" r="2" />
+            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
           </svg>
-          <div class="logo-row">
-            <button id="btn-pick-logo" type="button">选择</button>
-            <button id="btn-clear-logo" type="button" class="ghost logo-reset" aria-label="恢复默认头像">
-              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                <path d="M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-              </svg>
-              <span>默认</span>
-            </button>
+          <div class="icon-field">
+            <div class="icon-action-pop">
+              <button id="btn-pick-logo" class="icon-picker" type="button" aria-label="选择工具栏图标">
+                <img id="logo-picker-preview" alt="" hidden />
+                <svg class="icon-placeholder" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <rect width="18" height="18" x="3" y="3" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+                  <circle cx="9" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <button id="btn-clear-logo" type="button" class="logo-reset" aria-label="恢复默认工具栏图标" title="恢复默认">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <span class="icon-label">工具栏</span>
+            <input id="logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden />
           </div>
-          <input
-            id="logo-file"
-            type="file"
-            accept="image/png,image/jpeg,image/webp,image/gif,image/bmp"
-            hidden
-          />
+          <div class="icon-field">
+            <div class="icon-action-pop">
+              <button id="btn-pick-taskbar-logo" class="icon-picker" type="button" aria-label="选择任务栏图标">
+                <img id="taskbar-logo-picker-preview" alt="" hidden />
+                <svg class="icon-placeholder" viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                  <rect width="18" height="18" x="3" y="3" rx="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+                  <circle cx="9" cy="9" r="2" fill="none" stroke="currentColor" stroke-width="1.7" />
+                  <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+              <button id="btn-clear-taskbar-logo" type="button" class="logo-reset" aria-label="恢复默认任务栏图标" title="恢复默认">
+                <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
+                  <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8M3 3v5h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+              </button>
+            </div>
+            <span class="icon-label">任务栏</span>
+            <span id="taskbar-icon-tip" class="ime-tip" tabindex="0" aria-label="任务栏图标提示" aria-describedby="taskbar-icon-tip-text">
+              <svg class="ime-tip-icon" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M12 8v4m0 4h.01" />
+              </svg>
+              <span id="taskbar-icon-tip-text" class="ime-tip-bubble" role="tooltip">修改任务栏图标需重启资源管理器</span>
+            </span>
+            <input id="taskbar-logo-file" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/bmp" hidden />
+          </div>
         </section>
         <div class="row-actions">
           <button id="btn-install" type="button">安装</button>
@@ -340,6 +369,7 @@
     </div>
     <script src="./greeting.js"></script>
     <script src="./kaomoji.js"></script>
+    <script src="./preview-pixels.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

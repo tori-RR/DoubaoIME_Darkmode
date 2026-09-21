@@ -175,9 +175,7 @@ impl Store {
                 .duration_since(std::time::UNIX_EPOCH)
                 .map_err(|e| e.to_string())?
                 .as_secs();
-            let isolated = self
-                .root
-                .join(format!("dmdm_backup_pending_saved_{stamp}"));
+            let isolated = self.root.join(format!("dmdm_backup_pending_saved_{stamp}"));
             fs::rename(&staging, &isolated).map_err(|e| {
                 format!("无法隔离未完成的首次备份，请保留 dmdm_backup_pending：{e}")
             })?;
@@ -421,10 +419,10 @@ mod tests {
             .unwrap();
         assert!(root.join(BACKUP).is_dir());
         assert!(!pending.exists());
-        assert!(fs::read_dir(&root)
-            .unwrap()
-            .flatten()
-            .any(|e| e.file_name().to_string_lossy().starts_with("dmdm_backup_pending_saved_")));
+        assert!(fs::read_dir(&root).unwrap().flatten().any(|e| e
+            .file_name()
+            .to_string_lossy()
+            .starts_with("dmdm_backup_pending_saved_")));
         fs::remove_dir_all(root).unwrap();
     }
     #[test]
@@ -436,7 +434,10 @@ mod tests {
         assert!(store.apply(&next, &expected, "new", "j").is_err());
         assert!(root.join("dmdm_backup_pending").is_dir());
         assert!(!root.join(BACKUP).exists());
-        assert_eq!(store.live_hashes().unwrap()["a.svg"], safe_fs::hash(b"changed"));
+        assert_eq!(
+            store.live_hashes().unwrap()["a.svg"],
+            safe_fs::hash(b"changed")
+        );
         fs::remove_dir_all(root).unwrap();
     }
     #[test]

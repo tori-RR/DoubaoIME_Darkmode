@@ -2,12 +2,15 @@
 
 mod avatar;
 mod elevate;
+mod explorer;
 mod fonts;
+mod icon_resource;
 mod ime_process;
 mod ime_rpc;
 mod kaomoji;
 mod safe_fs;
 mod skin;
+mod taskbar_icon;
 mod theme;
 mod transaction;
 mod workdir;
@@ -67,6 +70,49 @@ struct UiState {
     fonts: FontChoice,
     #[serde(default = "default_glass_opacity")]
     glass_opacity: u8,
+    #[serde(default)]
+    taskbar_icon: TaskbarChoice,
+}
+
+// Existing configurations intentionally keep the registered icon until the
+// user chooses one. A new theme must not silently reset external branding.
+#[derive(Clone, Default, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case", deny_unknown_fields)]
+enum TaskbarChoice {
+    #[default]
+    Keep,
+    Default,
+    Custom {
+        revision: String,
+    },
+}
+
+impl TaskbarChoice {
+    fn request(&self) -> Result<taskbar_icon::Request, String> {
+        Ok(match self {
+            Self::Keep => taskbar_icon::Request::Keep,
+            Self::Default => taskbar_icon::Request::Default,
+            Self::Custom { revision } => {
+                let path = taskbar_logo_path(revision)?;
+                let png = safe_fs::read(&path, avatar::MAX_UPLOAD_BYTES as u64)
+                    .map_err(|_| "任务栏图片无法读取，请重新选择或恢复默认")?;
+                if safe_fs::hash(&png) != *revision {
+                    return Err("任务栏图片发生变化，请重新选择或恢复默认".into());
+                }
+                avatar::validate_stored(&png)?;
+                taskbar_icon::Request::Custom { png }
+            }
+        })
+    }
+}
+
+fn taskbar_logo_path(revision: &str) -> Result<PathBuf, String> {
+    if revision.len() != 64 || !revision.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err("任务栏图片记录无效".into());
+    }
+    Ok(workdir::app_dir()
+        .join("taskbar-icons")
+        .join(format!("{revision}.png")))
 }
 
 fn default_glass_opacity() -> u8 {
@@ -81,6 +127,7 @@ impl Default for UiState {
             custom_themes: Vec::new(),
             fonts: FontChoice::default(),
             glass_opacity: GLASS_OPACITY_DEFAULT,
+            taskbar_icon: TaskbarChoice::Keep,
         }
     }
 }
@@ -104,6 +151,9 @@ struct AppStatus {
     glass_opacity: u8,
     has_custom_logo: bool,
     logo_revision: String,
+    has_custom_taskbar_logo: bool,
+    taskbar_logo_revision: String,
+    taskbar_icon_pending: bool,
     can_restore: bool,
     recovery_needed: bool,
     review_mode: bool,
@@ -318,6 +368,41 @@ fn current_status() -> AppStatus {
     if workdir::restart_pending_version().is_some() && warning.is_empty() {
         warning = "皮肤操作已结束，但输入法尚未恢复；请手动打开豆包输入法，或重新打开本助手".into();
     }
+    let taskbar_request = state.taskbar_icon.request();
+    let taskbar_managed = installed && taskbar_icon::is_managed().unwrap_or(false);
+    let taskbar_recovery = match taskbar_icon::recovery_needed() {
+        Ok(pending) => pending,
+        Err(err) => {
+            warning = err;
+            true
+        }
+    };
+    let has_custom_taskbar_logo = match &state.taskbar_icon {
+        TaskbarChoice::Custom { .. } => true,
+        TaskbarChoice::Default => false,
+        TaskbarChoice::Keep => installed && !taskbar_icon::is_default().unwrap_or(true),
+    };
+    let taskbar_logo_revision = match &state.taskbar_icon {
+        TaskbarChoice::Custom { revision } => revision.clone(),
+        TaskbarChoice::Default => "default".into(),
+        TaskbarChoice::Keep => taskbar_icon::read_registry()
+            .ok()
+            .and_then(|snapshot| serde_json::to_vec(&snapshot).ok())
+            .map(|bytes| safe_fs::hash(&bytes))
+            .unwrap_or_default(),
+    };
+    let taskbar_icon_pending = match &taskbar_request {
+        Ok(request) => taskbar_icon::pending(request).unwrap_or(false),
+        Err(err) => {
+            warning = err.clone();
+            false
+        }
+    };
+    if taskbar_recovery {
+        warning = "任务栏图标操作中断，请点击恢复".into();
+    } else if workdir::shell_refresh_pending() && warning.is_empty() {
+        warning = "任务栏图标已保存，但资源管理器尚未恢复；再次安装可重试，或注销后重新登录".into();
+    }
     if state_path().exists()
         && safe_fs::read(&state_path(), 1024 * 1024)
             .ok()
@@ -337,8 +422,12 @@ fn current_status() -> AppStatus {
         ime_structure_matches: structure_matches,
         ime_structure_detail: structure_detail,
         ime_compatible: compatible,
-        skin_applied: applied,
-        installed_label: label,
+        skin_applied: applied || taskbar_managed,
+        installed_label: if !applied && taskbar_managed {
+            "任务栏图标".into()
+        } else {
+            label
+        },
         colors: colors_for(&state),
         theme_id: state.theme_id,
         custom: state.custom,
@@ -347,8 +436,11 @@ fn current_status() -> AppStatus {
         glass_opacity: clamp_glass_opacity(state.glass_opacity),
         has_custom_logo: logo.is_some(),
         logo_revision: logo.as_ref().map(|b| safe_fs::hash(b)).unwrap_or_default(),
-        can_restore,
-        recovery_needed: recovery,
+        has_custom_taskbar_logo,
+        taskbar_logo_revision,
+        taskbar_icon_pending: taskbar_icon_pending || workdir::shell_refresh_pending(),
+        can_restore: can_restore || taskbar_managed,
+        recovery_needed: recovery || taskbar_recovery,
         review_mode: workdir::review_mode(),
         warning,
         app_version: env!("CARGO_PKG_VERSION").into(),
@@ -358,7 +450,7 @@ fn current_status() -> AppStatus {
 fn prepare_job(action: skin::Action, colors: Option<ThemeColors>) -> Result<skin::Job, String> {
     let target = skin::detect_for_status()?;
     let store = skin::store_for(&target)?;
-    let action = if store.recovery_needed()? {
+    let action = if store.recovery_needed()? || taskbar_icon::recovery_needed()? {
         skin::Action::Recover
     } else {
         action
@@ -379,6 +471,19 @@ fn prepare_job(action: skin::Action, colors: Option<ThemeColors>) -> Result<skin
     if applying && workdir::user_logo_path().exists() && logo.is_none() {
         return Err("头像无效，请重新导入".into());
     }
+    let taskbar = if applying {
+        state.taskbar_icon.request()?
+    } else if matches!(action, skin::Action::Restore) && taskbar_icon::is_managed().unwrap_or(false)
+    {
+        taskbar_icon::Request::Default
+    } else {
+        taskbar_icon::Request::Keep
+    };
+    let expected_taskbar = if matches!(taskbar, taskbar_icon::Request::Keep) {
+        None
+    } else {
+        Some(taskbar_icon::read_registry()?)
+    };
     let label = if palette == dark_colors() {
         "Dark".into()
     } else if palette == light_colors() {
@@ -401,6 +506,8 @@ fn prepare_job(action: skin::Action, colors: Option<ThemeColors>) -> Result<skin
         opacity: state.glass_opacity,
         light: state.theme_id == "light",
         logo,
+        taskbar,
+        expected_taskbar,
         label: if state.glass_opacity < 100 {
             format!("{label} {}%", state.glass_opacity)
         } else {
@@ -451,6 +558,58 @@ async fn import_logo(request: tauri::ipc::Request<'_>) -> Result<AppStatus, Stri
         let _lock = state_lock()?;
         safe_fs::atomic_write(&workdir::user_logo_path(), &png)?;
         Ok(current_status())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+async fn import_taskbar_logo(request: tauri::ipc::Request<'_>) -> Result<AppStatus, String> {
+    let bytes = upload_bytes(request.body())?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let png = avatar::square_pad_png(&bytes)?;
+        let _lock = state_lock()?;
+        let revision = safe_fs::hash(&png);
+        // Content-addressed drafts make config backup/rollback safe. Selection
+        // changes only this user's draft, never the registry or Explorer.
+        safe_fs::atomic_write(&taskbar_logo_path(&revision)?, &png)?;
+        let mut state = load_state();
+        state.taskbar_icon = TaskbarChoice::Custom { revision };
+        save_state(&state)?;
+        Ok(current_status())
+    })
+    .await
+    .map_err(|e| e.to_string())?
+}
+
+#[tauri::command]
+fn clear_taskbar_logo() -> Result<AppStatus, String> {
+    let _lock = state_lock()?;
+    let mut state = load_state();
+    state.taskbar_icon = TaskbarChoice::Default;
+    save_state(&state)?;
+    Ok(current_status())
+}
+
+#[derive(Serialize)]
+struct IconPreviews {
+    toolbar: Option<Vec<u8>>,
+    taskbar: Option<Vec<u8>>,
+}
+
+#[tauri::command]
+async fn get_icon_previews() -> Result<IconPreviews, String> {
+    tauri::async_runtime::spawn_blocking(|| {
+        let toolbar = load_user_logo().or_else(|| {
+            let src = official_status_wnd()?.join("logo.png");
+            safe_fs::read(&src, avatar::MAX_UPLOAD_BYTES as u64).ok()
+        });
+        let taskbar = load_state()
+            .taskbar_icon
+            .request()
+            .ok()
+            .and_then(|request| taskbar_icon::preview(&request).ok().flatten());
+        Ok(IconPreviews { toolbar, taskbar })
     })
     .await
     .map_err(|e| e.to_string())?
@@ -770,9 +929,12 @@ fn main() {
             set_glass_opacity,
             list_system_fonts,
             get_user_logo,
+            get_icon_previews,
             get_toolbar_preview,
             import_logo,
             clear_logo,
+            import_taskbar_logo,
+            clear_taskbar_logo,
             install,
             uninstall,
             open_workdir,
@@ -820,6 +982,49 @@ mod upload_tests {
             serde_json::json!(["1"]),
         ] {
             assert!(upload_bytes(&InvokeBody::Json(value)).is_err());
+        }
+    }
+}
+
+#[cfg(test)]
+mod icon_choice_tests {
+    use super::*;
+
+    #[test]
+    fn old_config_keeps_registered_taskbar_icon() {
+        let mut json = serde_json::to_value(UiState::default()).unwrap();
+        json.as_object_mut().unwrap().remove("taskbar_icon");
+        let loaded: UiState = serde_json::from_value(json).unwrap();
+        assert!(matches!(
+            loaded.taskbar_icon.request().unwrap(),
+            taskbar_icon::Request::Keep
+        ));
+    }
+
+    #[test]
+    fn explicit_default_is_distinct_from_unchanged() {
+        let json = serde_json::to_vec(&TaskbarChoice::Default).unwrap();
+        let loaded: TaskbarChoice = serde_json::from_slice(&json).unwrap();
+        assert!(matches!(
+            loaded.request().unwrap(),
+            taskbar_icon::Request::Default
+        ));
+    }
+
+    #[test]
+    fn draft_paths_accept_only_content_hashes() {
+        let digest = safe_fs::hash(b"test draft");
+        assert!(taskbar_logo_path(&digest)
+            .unwrap()
+            .starts_with(workdir::app_dir().join("taskbar-icons")));
+        for revision in [
+            "",
+            "../logo",
+            "C:\\Windows\\file",
+            &"z".repeat(64),
+            &"a".repeat(65),
+        ] {
+            assert!(taskbar_logo_path(revision).is_err());
         }
     }
 }

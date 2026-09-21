@@ -225,6 +225,10 @@ pub struct Job {
     pub opacity: u8,
     pub light: bool,
     pub logo: Option<Vec<u8>>,
+    #[serde(default)]
+    pub taskbar: crate::taskbar_icon::Request,
+    #[serde(default)]
+    pub expected_taskbar: Option<crate::taskbar_icon::Snapshot>,
     pub label: String,
     pub id: String,
 }
@@ -247,6 +251,17 @@ impl Job {
         }
         if let Some(logo) = &self.logo {
             avatar::validate_stored(logo)?;
+        }
+        crate::taskbar_icon::validate(&self.taskbar)?;
+        if matches!(self.taskbar, crate::taskbar_icon::Request::Keep)
+            != self.expected_taskbar.is_none()
+        {
+            return Err("任务栏图标请求缺少快照或参数不一致".into());
+        }
+        if !matches!(self.action, Action::Apply)
+            && matches!(self.taskbar, crate::taskbar_icon::Request::Custom { .. })
+        {
+            return Err("恢复操作不能写入自定义任务栏图标".into());
         }
         if self.expected.keys().ne(official_hashes().keys())
             || self
@@ -371,6 +386,8 @@ mod structure_tests {
             opacity: 100,
             light: false,
             logo: None,
+            taskbar: crate::taskbar_icon::Request::Keep,
+            expected_taskbar: None,
             label: "test".into(),
             id: "job".into(),
         };
@@ -485,7 +502,7 @@ fn target_for_job(job: &Job) -> Result<DetectedIme, String> {
                 version: job.version.clone(),
             };
             let store = store_for(&target)?;
-            if store.recovery_needed()? {
+            if store.recovery_needed()? || crate::taskbar_icon::recovery_needed()? {
                 Ok(target)
             } else {
                 Err(err)
@@ -498,11 +515,11 @@ fn target_for_job(job: &Job) -> Result<DetectedIme, String> {
 fn preflight_target(job: &Job, target: &DetectedIme) -> Result<(), String> {
     let store = store_for(target)?;
     if matches!(job.action, Action::Recover) {
-        if !store.recovery_needed()? {
+        if !store.recovery_needed()? && !crate::taskbar_icon::recovery_needed()? {
             return Err("没有待恢复事务".into());
         }
     } else {
-        if store.recovery_needed()? {
+        if store.recovery_needed()? || crate::taskbar_icon::recovery_needed()? {
             return Err("存在中断事务，请先恢复".into());
         }
         let originals = store.originals()?;
@@ -516,6 +533,11 @@ fn preflight_target(job: &Job, target: &DetectedIme) -> Result<(), String> {
         }
         if store.live_hashes()? != job.expected {
             return Err("预检后皮肤发生变化".into());
+        }
+        if let Some(expected) = &job.expected_taskbar {
+            if crate::taskbar_icon::read_registry()? != *expected {
+                return Err("任务栏图标在预检后发生变化，请重试".into());
+            }
         }
     }
     Ok(())
@@ -536,12 +558,15 @@ pub fn job_skin(job: &Job) -> Result<PathBuf, String> {
 pub struct JobResult {
     pub id: String,
     pub error: Option<String>,
+    #[serde(default)]
+    pub taskbar_changed: bool,
 }
 pub fn run_job(job: &Job) -> Result<(), String> {
     job.validate()?;
     let root = job_skin(job)?;
     let _guards = safe_fs::guard_path(&root.join("status_wnd"))?;
     let _lock = safe_fs::exclusive_lock(&root.join(".dmdm-install.lock"))?;
+    let mut taskbar_changed = false;
     let result = (|| {
         let target = target_for_job(job)?;
         preflight_target(job, &target)?;
@@ -553,22 +578,55 @@ pub fn run_job(job: &Job) -> Result<(), String> {
         };
         ime_process::stop(Path::new(IME_ROOT), &job.version)?;
         match next {
-            Some(files) => store.apply(
-                &files,
-                &job.expected,
-                if matches!(job.action, Action::Restore) {
-                    "官方浅色"
-                } else {
-                    &job.label
-                },
-                &job.id,
-            ),
-            None => store.recover(),
+            Some(files) => {
+                // The icon journal is durable before the first skin write.
+                // A failed skin transaction rolls the icon reference back too;
+                // a killed helper leaves both recovery paths discoverable.
+                let undo = crate::taskbar_icon::apply(
+                    &job.taskbar,
+                    job.expected_taskbar.as_ref(),
+                    &job.id,
+                )?;
+                if let Err(err) = store.apply(
+                    &files,
+                    &job.expected,
+                    if matches!(job.action, Action::Restore) {
+                        "官方浅色"
+                    } else {
+                        &job.label
+                    },
+                    &job.id,
+                ) {
+                    return match undo.rollback() {
+                        Ok(()) => Err(err),
+                        Err(rollback) => Err(format!("{err}；任务栏图标回滚未完成：{rollback}")),
+                    };
+                }
+                taskbar_changed = undo.changed;
+                undo.finish()
+            }
+            None => {
+                if store.recovery_needed()? {
+                    store.recover()?;
+                }
+                if crate::taskbar_icon::recovery_needed()? {
+                    // If skin committed just before the helper stopped, finish
+                    // its matching icon commit instead of undoing half the job.
+                    let committed = store.manifest()?.filter(|manifest| {
+                        store.live_hashes().ok().as_ref() == Some(&manifest.applied)
+                    });
+                    taskbar_changed = crate::taskbar_icon::recover(
+                        committed.as_ref().map(|manifest| manifest.job.as_str()),
+                    )?;
+                }
+                Ok(())
+            }
         }
     })();
     let receipt = JobResult {
         id: job.id.clone(),
         error: result.clone().err(),
+        taskbar_changed,
     };
     safe_fs::atomic_write(
         &root.join("dmdm_last_result.json"),

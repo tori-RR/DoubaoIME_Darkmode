@@ -418,7 +418,10 @@ function render(status, { keepPlugin, keepColors } = {}) {
   const needsRestore = status.skin_applied || status.recovery_needed;
   $("btn-uninstall").disabled = !!status.review_mode || (needsRestore && !status.can_restore);
   $("btn-clear-logo").disabled = false;
-  $("btn-install").title = status.review_mode ? "检查模式不写入真实输入法" : "备份并应用当前预览，需要管理员授权";
+  $("btn-clear-taskbar-logo").disabled = false;
+  $("btn-install").title = status.review_mode ? "检查模式不写入真实输入法" :
+    status.taskbar_icon_pending ? "备份并应用当前预览，需要管理员授权；任务栏图标更改后将重启资源管理器" :
+    "备份并应用当前预览，需要管理员授权";
   $("btn-uninstall").title = "恢复官方皮肤；保留已验证的原件备份";
   $("status-note").textContent = status.warning || (status.review_mode ? "检查模式 · 设置仅用于本次预览" : "");
   $("status-note").hidden = !$("status-note").textContent;
@@ -433,13 +436,15 @@ function render(status, { keepPlugin, keepColors } = {}) {
   setGlassInput(status.glass_opacity);
   paintThemeActions(status.theme_id);
   paintPreview(colors, status.fonts, status.theme_id, status.glass_opacity);
+  paintIconPreviews(status);
   paintIme(status);
   if (!keepPlugin) paintPlugin(status);
 }
 
 function call(name, payload) {
   if (inflight && name !== "get_status") return inflight;
-  const busy = ["install", "uninstall", "import_logo"].includes(name);
+  const uploading = ["import_logo", "import_taskbar_logo"].includes(name);
+  const busy = ["install", "uninstall"].includes(name) || uploading;
   const run = async () => {
     showError("");
     const controls = busy ? [...document.querySelectorAll("input, button")].map(el => [el, el.disabled]) : [];
@@ -448,11 +453,11 @@ function call(name, payload) {
       closeColorCard();
       document.querySelectorAll(".combo-menu").forEach(el => { el.hidden = true; });
       document.querySelector("main").setAttribute("aria-busy", "true");
-      setPluginHint("wait", name === "import_logo" ? "处理头像…" : "等待授权");
+      setPluginHint("wait", uploading ? "处理图标…" : "等待授权");
     }
     try {
       const status = await invoke(name, payload);
-      const keepColors = ["delete_custom_theme", "install", "set_fonts", "set_glass_opacity", "import_logo", "clear_logo"].includes(name);
+      const keepColors = ["delete_custom_theme", "install", "set_fonts", "set_glass_opacity", "import_logo", "clear_logo", "import_taskbar_logo", "clear_taskbar_logo"].includes(name);
       window.clearTimeout(flashTimer);
       render(status, { keepColors, keepPlugin: name === "uninstall" });
       if (name === "uninstall") flashUninstalled(status);
@@ -958,12 +963,14 @@ function applyLogoBytes(bytes, hasCustom) {
   if (!bytes || !bytes.length) {
     bar.removeAttribute("src");
     bar.hidden = true;
+    window.PreviewPixels?.schedule();
     return;
   }
   const u8 = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
   logoObjectUrl = URL.createObjectURL(new Blob([u8], { type: "image/png" }));
   bar.src = logoObjectUrl;
   bar.hidden = false;
+  window.PreviewPixels?.schedule();
 }
 
 function hideToolbar() {
@@ -1010,6 +1017,43 @@ function paintLogo(status) {
   }, 16);
 }
 
+// Each render supersedes the previous request, even when going A -> B -> A.
+// Both thumbnails are decoded by the backend and never share an object URL.
+let iconPreviewSeq = 0;
+const iconPreviewUrls = { toolbar: "", taskbar: "" };
+
+function applyIconPreview(kind, bytes) {
+  const image = $(kind === "toolbar" ? "logo-picker-preview" : "taskbar-logo-picker-preview");
+  const previous = iconPreviewUrls[kind];
+  const next = bytes?.length ? URL.createObjectURL(new Blob([new Uint8Array(bytes)], { type: "image/png" })) : "";
+  iconPreviewUrls[kind] = next;
+  if (next) image.src = next;
+  else image.removeAttribute("src");
+  image.hidden = !next;
+  if (previous) URL.revokeObjectURL(previous);
+  window.PreviewPixels?.schedule();
+}
+
+function paintIconPreviews(status) {
+  const seq = ++iconPreviewSeq;
+  if (!window.__TAURI__ || !status) {
+    applyIconPreview("toolbar", null);
+    applyIconPreview("taskbar", null);
+    return Promise.resolve();
+  }
+  return invoke("get_icon_previews")
+    .then((previews) => {
+      if (seq !== iconPreviewSeq) return;
+      applyIconPreview("toolbar", previews.toolbar);
+      applyIconPreview("taskbar", previews.taskbar);
+    })
+    .catch(() => {
+      if (seq !== iconPreviewSeq) return;
+      applyIconPreview("toolbar", null);
+      applyIconPreview("taskbar", null);
+    });
+}
+
 $("btn-install").addEventListener("click", () => {
   if (window.Kaomoji) window.Kaomoji.show("great");
   call("install", { colors: readPickers() });
@@ -1021,29 +1065,48 @@ $("btn-uninstall").addEventListener("click", () => {
   call("uninstall");
 });
 $("btn-pick-logo").addEventListener("click", () => $("logo-file").click());
+$("btn-pick-taskbar-logo").addEventListener("click", () => $("taskbar-logo-file").click());
 $("btn-clear-logo").addEventListener("click", () => {
   const official = !lastStatus || !lastStatus.has_custom_logo;
   if (window.Kaomoji) window.Kaomoji.show(official ? "bad" : "cancel");
   if (official) return;
   call("clear_logo");
 });
-$("logo-file").addEventListener("change", async () => {
-  const file = $("logo-file").files[0];
-  $("logo-file").value = "";
+$("btn-clear-taskbar-logo").addEventListener("click", () => {
+  const official = !lastStatus || !lastStatus.has_custom_taskbar_logo;
+  if (window.Kaomoji) window.Kaomoji.show(official ? "bad" : "cancel");
+  if (official) return;
+  call("clear_taskbar_logo");
+});
+
+let iconImportQueue = Promise.resolve();
+
+function importIconFile(inputId, command) {
+  const input = $(inputId);
+  const file = input.files[0];
+  input.value = "";
   if (!file) return;
   if (file.size > MAX_LOGO_BYTES) {
     showError("图片太大（上限 8MB，边长 4096 像素）");
     return;
   }
-  try {
-    // Pass the File-owned ArrayBuffer directly. Tauri recognizes a top-level
-    // ArrayBuffer as a raw IPC body; wrapping it in a typed view has fallen
-    // back to JSON on some WebView2/Tauri combinations.
-    await call("import_logo", await file.arrayBuffer());
-  } catch (err) {
-    showError(`读取图片失败：${err}`);
-  }
-});
+  // Reading a File is asynchronous. Queue both pickers so a second selection
+  // cannot be swallowed by call() while the first import is still running.
+  iconImportQueue = iconImportQueue.then(async () => {
+    try {
+      // Tauri recognizes a top-level ArrayBuffer as a raw IPC body.
+      const bytes = await file.arrayBuffer();
+      while (inflight) await inflight;
+      await call(command, bytes);
+    } catch (err) {
+      showError(`读取图片失败：${err}`);
+    }
+  });
+  return iconImportQueue;
+}
+
+$("logo-file").addEventListener("change", () => importIconFile("logo-file", "import_logo"));
+$("taskbar-logo-file").addEventListener("change", () => importIconFile("taskbar-logo-file", "import_taskbar_logo"));
 
 $("glass-opacity").addEventListener("input", () => {
   const pct = readGlassOpacity();

@@ -3,7 +3,7 @@ Desktop.ini
 *.log
 .DS_Store
 __pycache__/
-*.pyc
+*.py[cod]
 
 # Official installer binary and any unpack of it. Do not commit.
 official_installer_sample/
@@ -17,6 +17,7 @@ patch/
 # Local helper / icon debug dumps
 .cursor/
 AGENT.md
+AGENTS.md
 src-tauri/icons/_preview/
 src-tauri/icons/_pe_check/
 

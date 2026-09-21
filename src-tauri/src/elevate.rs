@@ -43,11 +43,22 @@ pub fn run_elevated(job: &skin::Job) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let params = format!("--elevated {} {}", quote(&path), safe_fs::hash(&raw));
     crate::workdir::write_restart_pending(&job.version)?;
+    let shell_was_pending = crate::workdir::shell_refresh_pending();
+    let shell_may_change = crate::taskbar_icon::pending(&job.taskbar)?
+        || (matches!(job.action, skin::Action::Recover) && crate::taskbar_icon::recovery_needed()?);
+    // Preserve the refresh intent if this parent disappears while the helper
+    // is running. Never restart Explorer merely when the application opens.
+    if shell_may_change {
+        crate::workdir::write_shell_refresh_pending()?;
+    }
     let code = match shell_runas(&exe, &params) {
         Ok(code) => code,
         Err(err) => {
             if err.contains("已取消管理员授权") || err.contains("无法提权") {
                 crate::workdir::clear_restart_pending();
+                if !shell_was_pending {
+                    crate::workdir::clear_shell_refresh_pending();
+                }
             }
             // The request is deliberately retained when helper liveness is unknown.
             return Err(err);
@@ -68,6 +79,23 @@ pub fn run_elevated(job: &skin::Job) -> Result<(), String> {
     if receipt.id != job.id {
         return Err("管理员助手结果与本次请求不一致；请检查输入法状态".into());
     }
+    let shell_restarted =
+        if receipt.taskbar_changed || (shell_was_pending && receipt.error.is_none()) {
+            // This code runs in the ordinary UI process, never in the elevated
+            // helper: launching an elevated Explorer would be a privilege bug.
+            crate::workdir::write_shell_refresh_pending()?;
+            let result = crate::explorer::restart()
+                .map_err(|err| format!("任务栏图标已保存，但资源管理器刷新未完成：{err}"));
+            if result.is_ok() {
+                crate::workdir::clear_shell_refresh_pending();
+            }
+            result
+        } else {
+            if !shell_was_pending && !crate::taskbar_icon::recovery_needed().unwrap_or(true) {
+                crate::workdir::clear_shell_refresh_pending();
+            }
+            Ok(())
+        };
     if let Some(err) = receipt.error {
         return Err(match restarted {
             Ok(()) => err,
@@ -77,7 +105,7 @@ pub fn run_elevated(job: &skin::Job) -> Result<(), String> {
     if code != 0 {
         return Err(format!("管理员助手异常退出（{code}），请检查事务恢复提示"));
     }
-    restarted
+    restarted.and(shell_restarted)
 }
 fn quote(path: &Path) -> String {
     format!("\"{}\"", path.display())
