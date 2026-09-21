@@ -556,7 +556,7 @@ h1 .mark {
 
 #kaomoji-word {
   display: inline-block;
-  white-space: pre-wrap;
+  white-space: pre;
 }
 
 #kaomoji-word.shake {
