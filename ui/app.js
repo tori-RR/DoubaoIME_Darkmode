@@ -790,9 +790,9 @@ function withCurrent(list, current) {
 }
 
 const DARK_COLORS = {
-  accent: "#8A8A8A",
+  accent: "#545454",
   background: "#2A2A2A",
-  foreground: "#F2F2F2",
+  foreground: "#E8E8E8",
   emphasis: "#FFFFFF",
 };
 const LIGHT_COLORS = {

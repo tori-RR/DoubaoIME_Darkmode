@@ -13,9 +13,9 @@ fn default_emphasis() -> String {
 
 pub fn dark_colors() -> ThemeColors {
     ThemeColors {
-        accent: "#8A8A8A".into(),
+        accent: "#545454".into(),
         background: "#2A2A2A".into(),
-        foreground: "#F2F2F2".into(),
+        foreground: "#E8E8E8".into(),
         emphasis: default_emphasis(),
     }
 }
@@ -648,11 +648,11 @@ mod tests {
         .unwrap();
         assert!(xml.contains(r#"<Font name="word" facename="KaiTi" size="19"/>"#));
         assert!(xml.contains(r#"<Font name="number" facename="KaiTi" size="16"/>"#));
-        assert!(xml.contains(r##"<Class name="index_style" font="number" textcolor="#B3F2F2F2" selectedtextcolor="#FFFFFFFF"/>"##));
-        assert!(xml.contains(r##"textcolor="#F2F2F2F2""##));
-        assert!(xml.contains("selectedbkcolor=\"#FF8A8A8A\"/>"));
-        assert!(xml.contains("selectedbkcolor=\"#FF8A8A8A\" />"));
-        assert!(xml.contains(r##"thumbnormalcolor="#4DF2F2F2" thumbhotcolor="#73F2F2F2""##));
+        assert!(xml.contains(r##"<Class name="index_style" font="number" textcolor="#B3E8E8E8" selectedtextcolor="#FFFFFFFF"/>"##));
+        assert!(xml.contains(r##"textcolor="#F2E8E8E8""##));
+        assert!(xml.contains("selectedbkcolor=\"#FF545454\"/>"));
+        assert!(xml.contains("selectedbkcolor=\"#FF545454\" />"));
+        assert!(xml.contains(r##"thumbnormalcolor="#4DE8E8E8" thumbhotcolor="#73E8E8E8""##));
         assert!(xml.contains(r#"<Window caption="wholewindow">"#));
         assert!(xml.contains("bkimage=\"file='white_bk.svg' corner='40,40,40,40'\""));
         assert!(!xml.contains("#BF000000") && !xml.contains("#FF4F84FF"));
@@ -789,12 +789,12 @@ mod tests {
         let bar = fs::read_to_string(dest.join("status_wnd/status_bar_bg.svg")).unwrap();
         assert!(bar.contains("fill=\"#2A2A2A\""));
         let icon = fs::read_to_string(dest.join("status_wnd/mic_normal.svg")).unwrap();
-        assert!(icon.contains("fill=\"#F2F2F2\" fill-opacity=\"0.85\""));
-        assert!(icon.contains("fill=\"#8A8A8A\""));
+        assert!(icon.contains("fill=\"#E8E8E8\" fill-opacity=\"0.85\""));
+        assert!(icon.contains("fill=\"#545454\""));
         let chevron = fs::read_to_string(dest.join("page_open.svg")).unwrap();
-        assert!(chevron.contains("stroke=\"#F2F2F2\" stroke-opacity=\"0.72\""));
+        assert!(chevron.contains("stroke=\"#E8E8E8\" stroke-opacity=\"0.72\""));
         let xml = fs::read_to_string(dest.join("window.xml")).unwrap();
-        assert!(xml.contains("selectedbkcolor=\"#FF8A8A8A\""));
+        assert!(xml.contains("selectedbkcolor=\"#FF545454\""));
         assert!(xml.contains("<TabLayout width=\"auto\""));
         assert_eq!(
             fs::read(dest.join("status_wnd/logo.png")).unwrap(),
@@ -836,7 +836,7 @@ mod tests {
         )
         .unwrap();
         assert!(dark.bg.contains("fill=\"#2A2A2A\""));
-        assert!(dark.mic.contains("fill=\"#F2F2F2\" fill-opacity=\"0.85\""));
+        assert!(dark.mic.contains("fill=\"#E8E8E8\" fill-opacity=\"0.85\""));
         assert_eq!(
             dark.logo.as_ref().unwrap(),
             &fs::read(src.join("logo.png")).unwrap()
@@ -884,7 +884,7 @@ mod tests {
         )
         .unwrap();
         assert!(xml.contains(r##"<Window caption="wholewindow" bkcolor="#00000000">"##));
-        assert!(xml.contains("selectedbkcolor=\"#B38A8A8A\""));
+        assert!(xml.contains("selectedbkcolor=\"#B3545454\""));
         let thinner_xml = themed_window_xml(
             OFFICIAL_XML,
             &dark_colors(),
@@ -895,7 +895,7 @@ mod tests {
             40,
         )
         .unwrap();
-        assert!(thinner_xml.contains("selectedbkcolor=\"#668A8A8A\""));
+        assert!(thinner_xml.contains("selectedbkcolor=\"#66545454\""));
         let almost = recolor_svg(src, "#2A2A2A", Some(&glass_opacity_attr(99))).unwrap();
         assert!(almost.contains("fill-opacity=\"0.99\""));
         assert!(recolor_svg(
